@@ -189,6 +189,8 @@ try:
             body = b"".join(chunks)
             responsive_css = """
             *,*::before,*::after{box-sizing:border-box}
+            #edutrack-brand-logo{display:flex!important;visibility:visible!important;opacity:1!important;z-index:2147483000!important}
+            #edutrack-brand-logo img{display:block!important;visibility:visible!important;opacity:1!important}
             html{width:100%;max-width:100%;min-height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth;overflow-x:hidden;overflow-y:auto}
             body{width:100%;max-width:100%;min-width:0;min-height:100vh;min-height:100dvh;height:auto!important;margin:0;overflow-x:hidden;overflow-y:auto!important}
             img,video,canvas,iframe,svg{max-width:100%}
@@ -267,9 +269,7 @@ try:
                 if body_open_end >= 0:
                     if b'id="edutrack-brand-logo"' not in body:
                         body = body[:body_open_end + 1] + logo_tag + body[body_open_end + 1:]
-                    else:
-                        # Make an existing logo visible above the login form and other page layers.
-                        body = body.replace(b'id="edutrack-brand-logo"', b'id="edutrack-brand-logo" style="display:flex!important;visibility:visible!important;opacity:1!important;z-index:2147483000!important"')
+
             # Ensure mobile browsers use the real device width, even if the packaged page omitted the viewport tag.
             if b"name=\"viewport\"" not in body.lower():
                 head_end = body.lower().find(b"</head>")
