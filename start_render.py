@@ -67,6 +67,37 @@ try:
 
     class StudyCoachWidgetMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request, call_next):
+            # Require a real, verified Supabase session before protected learning APIs.
+            if request.url.path in ("/api/chat", "/api/edutrack-study/tutor") and request.method == "POST":
+                auth_header = request.headers.get("authorization", "")
+                if not auth_header.lower().startswith("bearer "):
+                    return Response(
+                        content=json.dumps({"detail": "Connecte-toi à EduTrack pour utiliser cette fonctionnalité."}, ensure_ascii=False),
+                        status_code=401,
+                        media_type="application/json"
+                    )
+                supabase_url = os.getenv("EDUTRACK_SUPABASE_URL", "https://dzneydemngmubjpfujdk.supabase.co").rstrip("/")
+                supabase_key = os.getenv("EDUTRACK_SUPABASE_KEY", "sb_publishable_aUVbSBQWKy5zNVjKqhd-Fg_O-DBzhPt")
+                try:
+                    async with httpx.AsyncClient(timeout=8) as auth_client:
+                        auth_check = await auth_client.get(
+                            supabase_url + "/auth/v1/user",
+                            headers={"apikey": supabase_key, "Authorization": auth_header}
+                        )
+                    if auth_check.status_code != 200:
+                        return Response(
+                            content=json.dumps({"detail": "Ta session EduTrack a expiré. Reconnecte-toi."}, ensure_ascii=False),
+                            status_code=401,
+                            media_type="application/json"
+                        )
+                except Exception as exc:
+                    print(f"EduTrack Supabase auth check error: {exc}", flush=True)
+                    return Response(
+                        content=json.dumps({"detail": "Vérification de session indisponible. Réessaie dans un instant."}, ensure_ascii=False),
+                        status_code=503,
+                        media_type="application/json"
+                    )
+
             # Route the site's existing chat API to Groq instead of its built-in demo mode.
             if request.url.path == "/api/chat" and request.method == "POST":
                 key = os.getenv("GROQ_API_KEY", "").strip()
