@@ -11,12 +11,7 @@ services:
       && REQ=$(find . -name requirements.txt -not -path './.git/*' | head -n 1)
       && test -n "$REQ"
       && pip install -r "$REQ"
-    startCommand: >-
-      MAIN=$(find . -name main.py -not -path './.git/*' | head -n 1);
-      test -n "$MAIN";
-      DIR=$(dirname "$MAIN");
-      MOD=$(basename "$MAIN" .py);
-      python -m uvicorn "$MOD:app" --app-dir "$DIR" --host 0.0.0.0 --port "$PORT"
+    startCommand: python start_render.py
     envVars:
       - key: MODEL_PROVIDER
         value: groq
