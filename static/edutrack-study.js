@@ -138,7 +138,7 @@
         try{
           if(mode==='signup'){
             if(password.value.length<8)throw new Error('Choisis un mot de passe de 8 caractères minimum.');
-            const r=await client.auth.signUp({email:address,password:password.value,options:{data:{full_name:name.value.trim()},emailRedirectTo:location.origin}});
+            const r=await client.auth.signUp({email:address,password:password.value,options:{data:{full_name:name.value.trim()},emailRedirectTo:'https://edutrack-diqa.onrender.com'}});
             if(r.error)throw r.error;pendingEmail=address;
             if(r.data.session&&r.data.user){await saveProfile(r.data.user,name.value.trim());showApp(r.data.session);return;}
             mode='verify';email.value=address;say('Un code de confirmation a été demandé. Ouvre ton e-mail et saisis le code ci-dessous.','success');sync();code.focus();
