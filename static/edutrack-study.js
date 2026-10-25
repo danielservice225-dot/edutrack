@@ -9,7 +9,7 @@
   #et-study-panel input,#et-study-panel select,#et-study-panel textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:10px;font:inherit;background:#fff;color:#172033}
   #et-study-panel textarea{min-height:82px;resize:vertical} #et-study-panel .et-row{display:flex;gap:8px} #et-study-panel .et-row>*{flex:1;min-width:0}
   #et-study-panel button{border:0;border-radius:10px;padding:10px 12px;font:600 13px system-ui;cursor:pointer}
-  #et-study-panel .et-primary{background:#2563eb;color:#fff} #et-study-panel .et-secondary{background:#eef2ff;color:#3730a3}
+  #et-study-panel .et-primary{background:#2563eb;color:#fff} #et-study-panel .et-secondary{background:#eef2ff;color:#3730a3} #et-study-panel .et-voice{background:#dcfce7;color:#166534;border:1px solid #86efac} #et-study-panel button:disabled{opacity:.6;cursor:wait} #et-study-panel .et-voice-status{font-size:12px;color:#166534;min-height:16px}
   #et-study-panel .et-answer{white-space:pre-wrap;overflow-wrap:anywhere;background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:12px;min-height:44px}
   #et-study-panel .et-small{font-size:12px;color:#64748b} #et-study-panel label{font-weight:600;font-size:12px;color:#475569}
   `;
@@ -26,7 +26,7 @@
       <label for="et-question">Ta question ou ta réponse</label><textarea id="et-question" placeholder="Ex. Explique-moi cette formule avec un exemple…"></textarea>
       <div class="et-row"><button id="et-send" class="et-primary">Demander à EduTrack</button><button id="et-speak" class="et-secondary">Lire la réponse</button></div>
       <div id="et-answer" class="et-answer" aria-live="polite">Ton explication ou tes exercices apparaîtront ici.</div>
-      <div class="et-row"><button id="et-listen" class="et-secondary">Dicter ma question</button><button id="et-stop" class="et-secondary">Arrêter la voix</button></div>
+      <div class="et-row"><button id="et-listen" class="et-voice">Parler à EduTrack</button><button id="et-stop" class="et-secondary">Arrêter la voix</button></div><div id="et-voice-status" class="et-voice-status" aria-live="polite">Appuie sur « Parler à EduTrack », puis pose ta question à voix haute.</div>
       <hr style="width:100%;border:0;border-top:1px solid #e2e8f0">
       <strong>Rappel vocal de révision</strong>
       <div class="et-row"><div><label for="et-time">Heure de révision</label><input id="et-time" type="time" value="18:00"></div><div><label for="et-days">Répétition</label><select id="et-days"><option value="daily">Tous les jours</option><option value="weekdays">Lun–Ven</option></select></div></div>
@@ -54,13 +54,36 @@
     window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance($('et-answer').textContent);u.lang='fr-FR';window.speechSynthesis.speak(u);
   });
   $('et-stop').addEventListener('click',()=>{if('speechSynthesis' in window)window.speechSynthesis.cancel();});
+  let activeRecognition=null;
   $('et-listen').addEventListener('click',()=>{
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){setAnswer("La dictée vocale n'est pas prise en charge par ce navigateur. Essaie Chrome ou Edge et autorise le microphone.");return;}
-    const rec=new SR();rec.lang='fr-FR';rec.interimResults=false;rec.maxAlternatives=1;
-    rec.onresult=e=>{$('et-question').value=e.results[0][0].transcript;};
-    rec.onerror=e=>setAnswer('Dictée vocale indisponible : '+e.error+'. Vérifie la permission du microphone.');
-    rec.start();
+    if(!SR){
+      $('et-voice-status').textContent="La dictée vocale n'est pas disponible ici. Ouvre EduTrack dans Chrome ou Edge récent et vérifie le microphone.";
+      return;
+    }
+    try {
+      if(activeRecognition){activeRecognition.stop();activeRecognition=null;}
+      const rec=new SR();activeRecognition=rec;rec.lang='fr-FR';rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
+      $('et-voice-status').textContent='Écoute en cours… Parle clairement, puis attends la transcription.';
+      $('et-listen').textContent='Écoute en cours…';
+      rec.onresult=e=>{
+        let transcript='';
+        for(let i=e.resultIndex;i<e.results.length;i++) transcript+=e.results[i][0].transcript;
+        $('et-question').value=transcript;
+      };
+      rec.onerror=e=>{
+        const hints={ 'not-allowed':'Autorise l’accès au microphone dans le navigateur.','audio-capture':'Aucun microphone détecté.','no-speech':'Aucune parole détectée. Réessaie en parlant près du microphone.','network':'La reconnaissance vocale a rencontré un problème réseau.' };
+        $('et-voice-status').textContent=hints[e.error]||('Dictée vocale indisponible : '+e.error+'.');
+      };
+      rec.onend=()=>{
+        activeRecognition=null;$('et-listen').textContent='Parler à EduTrack';
+        if($('et-question').value.trim()) $('et-voice-status').textContent='Question transcrite. Vérifie le texte puis appuie sur « Demander à EduTrack ».';
+      };
+      rec.start();
+    } catch(err) {
+      activeRecognition=null;$('et-listen').textContent='Parler à EduTrack';
+      $('et-voice-status').textContent='Impossible de démarrer le microphone. Vérifie les permissions et réessaie.';
+    }
   });
   let lastReminder='';
   const announce=()=>{
