@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: edutrack
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
+    buildCommand: >-
+      python -c "import zipfile; zipfile.ZipFile('edutrack-fastapi.zip').extractall('.')"
+      && REQ=$(find . -name requirements.txt -not -path './.git/*' | head -n 1)
+      && test -n "$REQ"
+      && pip install -r "$REQ"
+    startCommand: >-
+      MAIN=$(find . -name main.py -not -path './.git/*' | head -n 1);
+      test -n "$MAIN";
+      DIR=$(dirname "$MAIN");
+      MOD=$(basename "$MAIN" .py);
+      python -m uvicorn "$MOD:app" --app-dir "$DIR" --host 0.0.0.0 --port "$PORT"
+    envVars:
+      - key: MODEL_PROVIDER
+        value: groq
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_API_KEY
+        sync: false
