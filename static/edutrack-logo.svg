@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+  <title id="title">EduTrack</title>
+  <desc id="desc">EduTrack, plateforme de suivi scolaire, symbole de livre ouvert et de progression.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563EB"/><stop offset="1" stop-color="#6D5AE6"/>
+    </linearGradient>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22C55E"/><stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="156" height="156" rx="38" fill="url(#g)"/>
+  <path d="M42 59c18-8 36-5 49 5v62c-13-10-31-13-49-5z" fill="#fff" opacity=".98"/>
+  <path d="M138 59c-18-8-36-5-49 5v62c13-10 31-13 49-5z" fill="#fff" opacity=".78"/>
+  <path d="M91 64v62" stroke="#2563EB" stroke-width="5" stroke-linecap="round"/>
+  <path d="M51 75c10-3 19-2 28 2M51 89c10-3 19-2 28 2M103 77c9-4 18-5 27-2M103 91c9-4 18-5 27-2" fill="none" stroke="#8AA8F8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M114 42l7-12 7 12 12 7-12 7-7 12-7-12-12-7z" fill="url(#a)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+  <text x="196" y="105" font-family="Inter, Poppins, Arial, sans-serif" font-size="65" font-weight="750" letter-spacing="-2" fill="#172554">Edu<tspan fill="#2563EB">Track</tspan></text>
+  <path d="M198 127h75" stroke="url(#a)" stroke-width="6" stroke-linecap="round"/>
+  <text x="198" y="153" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500" letter-spacing="2.4" fill="#64748B">APPRENDRE · PROGRESSER</text>
+</svg>
