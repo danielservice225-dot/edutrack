@@ -8,6 +8,7 @@ services:
     autoDeploy: true
     buildCommand: >-
       python -c "import zipfile; zipfile.ZipFile('edutrack-fastapi.zip').extractall('.')"
+      && python mobile_compat.py
       && REQ=$(find . -name requirements.txt -not -path './.git/*' | head -n 1)
       && test -n "$REQ"
       && pip install -r "$REQ"
