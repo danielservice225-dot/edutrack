@@ -154,6 +154,20 @@ try:
             main,section,article,.container,.wrapper,.app,.app-container,.main-content,.chat-container,.chat-wrapper,.messages,.chat-messages{min-width:0;max-width:100%}
             @media(max-width:768px){
               body{font-size:16px}
+              /* Sur téléphone, le menu ne doit plus flotter au-dessus de l'accueil. */
+              aside,.sidebar,#sidebar,.side-menu,.sidebar-menu,.navigation-drawer,.nav-drawer,.menu-drawer{
+                position:relative!important;inset:auto!important;float:none!important;
+                width:100%!important;max-width:100%!important;height:auto!important;
+                max-height:32dvh!important;overflow-y:auto!important;transform:none!important;
+                z-index:2!important;box-shadow:none!important
+              }
+              /* Le contenu d'accueil reste visible sous le menu et prend toute la largeur. */
+              main,#main, .home, #home, .homepage, .home-page, .main-content, .content, .page-content,
+              [class*="dashboard"],[class*="home-content"]{
+                position:relative!important;inset:auto!important;float:none!important;
+                width:100%!important;max-width:100%!important;min-width:0!important;
+                margin-left:0!important;margin-right:0!important;transform:none!important
+              }
               header,nav{max-width:100%}
               main,.container,.wrapper,.app-container,.main-content{width:100%!important;max-width:100%!important}
               input,textarea,select{font-size:16px!important}
