@@ -49,5 +49,43 @@ sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 
 app = getattr(module, variable)
+
+# Add the adaptive course tutor API and inject its responsive study widget into HTML pages.
+sys.path.insert(0, str(ROOT))
+from edutrack_features import router as study_router
+app.include_router(study_router)
+
+try:
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.responses import Response
+
+    study_script = (ROOT / "static" / "edutrack-study.js").read_text(encoding="utf-8")
+
+    class StudyCoachWidgetMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            content_type = response.headers.get("content-type", "")
+            if response.status_code != 200 or "text/html" not in content_type:
+                return response
+            chunks = [chunk async for chunk in response.body_iterator]
+            body = b"".join(chunks)
+            script_tag = ("<script>" + study_script + "</script>").encode("utf-8")
+            lower_body = body.lower()
+            closing = lower_body.rfind(b"</body>")
+            if closing >= 0:
+                body = body[:closing] + script_tag + body[closing:]
+            else:
+                body += script_tag
+            headers = dict(response.headers)
+            for header in ("content-length", "content-encoding", "etag", "content-md5"):
+                headers.pop(header, None)
+            return Response(content=body, status_code=response.status_code, headers=headers, media_type="text/html")
+
+    app.add_middleware(StudyCoachWidgetMiddleware)
+    print("EduTrack: coach de révision et interface vocale activés", flush=True)
+except Exception as exc:
+    # Keep the academic platform available even if optional UI injection fails.
+    print(f"EduTrack: widget d'étude non chargé: {exc}", flush=True)
+
 print(f"EduTrack: backend chargé depuis {path} (objet {variable})", flush=True)
 uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "10000")))
