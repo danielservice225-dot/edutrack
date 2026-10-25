@@ -235,7 +235,7 @@ try:
             @media(min-width:769px) and (max-width:1100px){
               #et-study-panel{max-height:82dvh}
             }
-            """
+            """.encode("utf-8")
             style_tag = b"<style id='edutrack-responsive-layout'>" + responsive_css + b"</style>"
             script_tag = ("<script>" + study_script + "</script>").encode("utf-8")
             logo_path = ROOT / "static" / "edutrack-logo.svg"
