@@ -168,6 +168,19 @@ try:
                         media_type="application/json"
                     )
 
+            # Serve the brand mark as a real PNG, generated from the maintained SVG source.
+            if request.url.path == "/static/edutrack-logo.png":
+                try:
+                    import cairosvg
+                    png_path = ROOT / "static" / "edutrack-logo.png"
+                    svg_path = ROOT / "static" / "edutrack-logo.svg"
+                    if not png_path.exists() or png_path.stat().st_mtime < svg_path.stat().st_mtime:
+                        cairosvg.svg2png(url=str(svg_path), write_to=str(png_path), output_width=640, output_height=180)
+                    return Response(content=png_path.read_bytes(), media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
+                except Exception as exc:
+                    print(f"EduTrack logo PNG error: {exc}", flush=True)
+                    return Response(content=b"Logo indisponible", status_code=500, media_type="text/plain")
+
             response = await call_next(request)
             content_type = response.headers.get("content-type", "")
             if response.status_code != 200 or "text/html" not in content_type:
@@ -240,19 +253,23 @@ try:
             script_tag = ("<script>" + study_script + "</script>").encode("utf-8")
             logo_path = ROOT / "static" / "edutrack-logo.svg"
             if logo_path.exists():
-                logo_data = base64.b64encode(logo_path.read_bytes()).decode("ascii")
                 logo_tag = (
                     '<a id="edutrack-brand-logo" href="/" aria-label="EduTrack accueil" '
-                    'style="position:fixed;z-index:99990;top:10px;left:12px;display:flex;align-items:center;'
-                    'background:rgba(255,255,255,.96);padding:4px 10px;border-radius:14px;'
-                    'box-shadow:0 4px 20px rgba(15,23,42,.12);border:1px solid #e2e8f0">'
-                    '<img alt="EduTrack" style="display:block;width:150px;max-width:38vw;height:auto" '
-                    'src="data:image/svg+xml;base64,' + logo_data + '"></a>'
+                    'style="position:fixed!important;z-index:2147483000!important;top:12px!important;left:12px!important;'
+                    'display:flex!important;align-items:center!important;justify-content:center!important;'
+                    'background:rgba(255,255,255,.98);padding:5px 10px;border-radius:14px;'
+                    'box-shadow:0 4px 20px rgba(15,23,42,.16);border:1px solid #e2e8f0">'
+                    '<img alt="EduTrack" style="display:block!important;width:150px;max-width:42vw;height:auto;'
+                    'object-fit:contain" src="/static/edutrack-logo.png"></a>'
                 ).encode("utf-8")
                 body_open = body.lower().find(b"<body")
                 body_open_end = body.find(b">", body_open) if body_open >= 0 else -1
-                if body_open_end >= 0 and b'id="edutrack-brand-logo"' not in body:
-                    body = body[:body_open_end + 1] + logo_tag + body[body_open_end + 1:]
+                if body_open_end >= 0:
+                    if b'id="edutrack-brand-logo"' not in body:
+                        body = body[:body_open_end + 1] + logo_tag + body[body_open_end + 1:]
+                    else:
+                        # Make an existing logo visible above the login form and other page layers.
+                        body = body.replace(b'id="edutrack-brand-logo"', b'id="edutrack-brand-logo" style="display:flex!important;visibility:visible!important;opacity:1!important;z-index:2147483000!important"')
             # Ensure mobile browsers use the real device width, even if the packaged page omitted the viewport tag.
             if b"name=\"viewport\"" not in body.lower():
                 head_end = body.lower().find(b"</head>")
