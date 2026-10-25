@@ -61,8 +61,82 @@ try:
 
     study_script = (ROOT / "static" / "edutrack-study.js").read_text(encoding="utf-8")
 
+    import base64
+    import json
+    import httpx
+
     class StudyCoachWidgetMiddleware(BaseHTTPMiddleware):
         async def dispatch(self, request, call_next):
+            # Route the site's existing chat API to Groq instead of its built-in demo mode.
+            if request.url.path == "/api/chat" and request.method == "POST":
+                key = os.getenv("GROQ_API_KEY", "").strip()
+                if not key:
+                    return Response(
+                        content=json.dumps({
+                            "error": "L'IA réelle n'est pas encore activée : ajoute GROQ_API_KEY dans les variables d'environnement du service EduTrack sur Render.",
+                            "detail": "Clé Groq manquante côté serveur."
+                        }, ensure_ascii=False),
+                        status_code=503,
+                        media_type="application/json"
+                    )
+                try:
+                    payload = await request.json()
+                    incoming = payload.get("messages")
+                    if isinstance(incoming, list) and incoming:
+                        messages = [{"role": "system", "content": (
+                            "Tu es EduTrack, un assistant scolaire polyvalent pour les élèves. "
+                            "Réponds en français par défaut. Adapte les explications au niveau indiqué, "
+                            "aide en toutes matières, notamment mathématiques, français, sciences, "
+                            "électronique et informatique. Explique clairement étape par étape, avec "
+                            "exemples. Si un cours est fourni, base-toi dessus. Pour les exercices, "
+                            "laisse l'élève essayer avant de donner la correction complète. Ne prétends "
+                            "pas être en mode démo et n'invente pas de faits."
+                        )}]
+                        for item in incoming[-16:]:
+                            if isinstance(item, dict) and item.get("role") in ("user", "assistant"):
+                                content = item.get("content", item.get("message", ""))
+                                if isinstance(content, str) and content.strip():
+                                    messages.append({"role": item["role"], "content": content[:12000]})
+                    else:
+                        prompt = next((payload.get(k) for k in ("message", "prompt", "question", "text", "input") if isinstance(payload.get(k), str) and payload.get(k).strip()), "")
+                        if not prompt:
+                            prompt = json.dumps(payload, ensure_ascii=False)[:12000]
+                        messages = [
+                            {"role": "system", "content": (
+                                "Tu es EduTrack, un assistant scolaire polyvalent. Réponds en français, "
+                                "adapte-toi au niveau de l'élève, explique étape par étape et avec des exemples. "
+                                "Aide dans toutes les matières, y compris maths, français, sciences, électronique "
+                                "et informatique. Pour un cours fourni, explique-le puis propose des exercices. "
+                                "Pour un exercice, demande d'abord à l'élève d'essayer avant de donner la correction."
+                            )},
+                            {"role": "user", "content": prompt[:12000]}
+                        ]
+                    async with httpx.AsyncClient(timeout=50) as client:
+                        upstream = await client.post(
+                            "https://api.groq.com/openai/v1/chat/completions",
+                            headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+                            json={"model": os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"), "messages": messages, "temperature": 0.4, "max_tokens": 1800}
+                        )
+                    if upstream.status_code >= 400:
+                        return Response(
+                            content=json.dumps({"error": "Le service IA a refusé la demande. Vérifie GROQ_API_KEY et GROQ_MODEL dans Render.", "detail": upstream.text[:500]}, ensure_ascii=False),
+                            status_code=502,
+                            media_type="application/json"
+                        )
+                    answer = upstream.json()["choices"][0]["message"]["content"]
+                    return Response(
+                        content=json.dumps({"response": answer, "answer": answer, "reply": answer, "message": answer, "content": answer}, ensure_ascii=False),
+                        status_code=200,
+                        media_type="application/json"
+                    )
+                except Exception as exc:
+                    print(f"EduTrack Groq chat error: {exc}", flush=True)
+                    return Response(
+                        content=json.dumps({"error": "EduTrack ne parvient pas à joindre le service IA. Réessaie dans un instant."}, ensure_ascii=False),
+                        status_code=502,
+                        media_type="application/json"
+                    )
+
             response = await call_next(request)
             content_type = response.headers.get("content-type", "")
             if response.status_code != 200 or "text/html" not in content_type:
@@ -70,6 +144,21 @@ try:
             chunks = [chunk async for chunk in response.body_iterator]
             body = b"".join(chunks)
             script_tag = ("<script>" + study_script + "</script>").encode("utf-8")
+            logo_path = ROOT / "static" / "edutrack-logo.svg"
+            if logo_path.exists():
+                logo_data = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+                logo_tag = (
+                    '<a id="edutrack-brand-logo" href="/" aria-label="EduTrack accueil" '
+                    'style="position:fixed;z-index:99990;top:10px;left:12px;display:flex;align-items:center;'
+                    'background:rgba(255,255,255,.96);padding:4px 10px;border-radius:14px;'
+                    'box-shadow:0 4px 20px rgba(15,23,42,.12);border:1px solid #e2e8f0">'
+                    '<img alt="EduTrack" style="display:block;width:150px;max-width:38vw;height:auto" '
+                    'src="data:image/svg+xml;base64,' + logo_data + '"></a>'
+                ).encode("utf-8")
+                body_open = body.lower().find(b"<body")
+                body_open_end = body.find(b">", body_open) if body_open >= 0 else -1
+                if body_open_end >= 0 and b'id="edutrack-brand-logo"' not in body:
+                    body = body[:body_open_end + 1] + logo_tag + body[body_open_end + 1:]
             lower_body = body.lower()
             closing = lower_body.rfind(b"</body>")
             if closing >= 0:
