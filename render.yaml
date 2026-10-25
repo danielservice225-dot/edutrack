@@ -11,6 +11,7 @@ services:
       && REQ=$(find . -name requirements.txt -not -path './.git/*' | head -n 1)
       && test -n "$REQ"
       && pip install -r "$REQ"
+      && pip install cairosvg
     startCommand: python start_render.py
     envVars:
       - key: MODEL_PROVIDER
