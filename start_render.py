@@ -168,18 +168,23 @@ try:
                         media_type="application/json"
                     )
 
-            # Serve the brand mark as a real PNG, generated from the maintained SVG source.
+            # Serve the existing brand artwork without depending on CairoSVG at runtime.
+            # The project is unpacked from edutrack-fastapi.zip, so search nested paths too.
             if request.url.path == "/static/edutrack-logo.png":
                 try:
-                    import cairosvg
                     png_path = ROOT / "static" / "edutrack-logo.png"
-                    svg_path = ROOT / "static" / "edutrack-logo.svg"
-                    if not png_path.exists() or png_path.stat().st_mtime < svg_path.stat().st_mtime:
-                        cairosvg.svg2png(url=str(svg_path), write_to=str(png_path), output_width=640, output_height=180)
-                    return Response(content=png_path.read_bytes(), media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
+                    if png_path.is_file():
+                        return Response(content=png_path.read_bytes(), media_type="image/png",
+                                        headers={"Cache-Control": "public, max-age=3600"})
+                    svg_candidates = list(ROOT.rglob("edutrack-logo.svg"))
+                    if not svg_candidates:
+                        raise FileNotFoundError("edutrack-logo.svg absent du projet déployé")
+                    # Browsers can render SVG image data even when the legacy URL ends in .png.
+                    return Response(content=svg_candidates[0].read_bytes(), media_type="image/svg+xml",
+                                    headers={"Cache-Control": "no-cache"})
                 except Exception as exc:
-                    print(f"EduTrack logo PNG error: {exc}", flush=True)
-                    return Response(content=b"Logo indisponible", status_code=500, media_type="text/plain")
+                    print(f"EduTrack logo serving error: {exc}", flush=True)
+                    return Response(content=b"Logo indisponible", status_code=404, media_type="text/plain")
 
             response = await call_next(request)
             content_type = response.headers.get("content-type", "")
