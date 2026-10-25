@@ -201,9 +201,17 @@ try:
                 overflow:visible!important;margin-left:0!important;margin-right:0!important;transform:none!important
               }
               /* Neutralise les hauteurs fixes et les zones qui bloquent le scroll mobile. */
+              /* Les racines d'application gardent parfois une hauteur fixe héritée du bureau. */
               body>*,#app,#root,.app,.app-container,.layout,.page,.main-layout,.content-wrapper,
               .dashboard-layout,.dashboard-content,.main-panel,.content-area{
-                max-width:100%!important;min-width:0!important;max-height:none!important
+                position:relative!important;width:100%!important;max-width:100%!important;
+                min-width:0!important;height:auto!important;min-height:0!important;
+                max-height:none!important;overflow:visible!important;transform:none!important
+              }
+              /* Le conteneur racine ne doit jamais empêcher le document de défiler sur téléphone. */
+              #app,#root,body>div:first-of-type{
+                height:auto!important;min-height:100dvh!important;max-height:none!important;
+                overflow:visible!important
               }
               header,nav{max-width:100%}
               main,.container,.wrapper,.app-container,.main-content{width:100%!important;max-width:100%!important}
