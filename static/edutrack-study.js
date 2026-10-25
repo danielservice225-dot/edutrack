@@ -36,22 +36,23 @@
   document.body.append(launch,panel);
   const $=id=>document.getElementById(id);
   const setAnswer=t=>{$('et-answer').textContent=t;};
+  const speakText=text=>{if(!('speechSynthesis' in window)){ $('et-voice-status').textContent='La lecture audio n’est pas prise en charge par ce navigateur.'; return; } window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(String(text||'')); u.lang='fr-FR'; u.rate=0.96; u.pitch=1; u.onstart=()=>{$('et-voice-status').textContent='EduTrack répond à voix haute…';}; u.onend=()=>{$('et-voice-status').textContent='Réponse terminée. Tu peux poser une autre question.';}; u.onerror=()=>{$('et-voice-status').textContent='Lecture audio interrompue. Tu peux appuyer sur « Lire la réponse ». ';}; window.speechSynthesis.speak(u);};
   launch.addEventListener('click',()=>{panel.style.display='flex';});
   $('et-close').addEventListener('click',()=>{panel.style.display='none';});
   $('et-file').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;try{$('et-course').value=await f.text();}catch(_){setAnswer("Impossible de lire ce fichier. Copie-colle le texte du cours dans la zone prévue.");}});
-  $('et-send').addEventListener('click',async()=>{
+  const submitQuestion=async(autoSpeak=false)=>{
     const question=$('et-question').value.trim();if(!question){setAnswer("Écris une question ou la consigne de l'exercice.");return;}
     const btn=$('et-send');btn.disabled=true;btn.textContent='EduTrack réfléchit…';setAnswer("Préparation de ton explication…");
     try{
       const res=await fetch('/api/edutrack-study/tutor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task:$('et-task').value,question,course_text:$('et-course').value,grade:$('et-grade').value,subject:$('et-subject').value,difficulty:$('et-level').value})});
       const data=await res.json();if(!res.ok)throw new Error(data.detail||'Le service est temporairement indisponible.');
-      setAnswer(data.answer||"Je n'ai pas reçu de réponse.");
+      const answer=data.answer||data.response||data.reply||"Je n'ai pas reçu de réponse.";setAnswer(answer);if(autoSpeak)speakText(answer);
     }catch(err){setAnswer('EduTrack : '+(err.message||'Une erreur est survenue. Vérifie la connexion et réessaie.'));}
     finally{btn.disabled=false;btn.textContent='Demander à EduTrack';}
-  });
+  };
+  $('et-send').addEventListener('click',()=>submitQuestion(false));
   $('et-speak').addEventListener('click',()=>{
-    if(!('speechSynthesis' in window)){setAnswer($('et-answer').textContent+'\n\nLa lecture vocale n’est pas disponible dans ce navigateur.');return;}
-    window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance($('et-answer').textContent);u.lang='fr-FR';window.speechSynthesis.speak(u);
+    speakText($('et-answer').textContent);
   });
   $('et-stop').addEventListener('click',()=>{if('speechSynthesis' in window)window.speechSynthesis.cancel();});
   let activeRecognition=null;
@@ -63,7 +64,7 @@
     }
     try {
       if(activeRecognition){activeRecognition.stop();activeRecognition=null;}
-      const rec=new SR();activeRecognition=rec;rec.lang='fr-FR';rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;
+      const rec=new SR();activeRecognition=rec;rec.lang='fr-FR';rec.interimResults=true;rec.continuous=false;rec.maxAlternatives=1;$('et-question').value='';
       $('et-voice-status').textContent='Écoute en cours… Parle clairement, puis attends la transcription.';
       $('et-listen').textContent='Écoute en cours…';
       rec.onresult=e=>{
@@ -77,7 +78,7 @@
       };
       rec.onend=()=>{
         activeRecognition=null;$('et-listen').textContent='Parler à EduTrack';
-        if($('et-question').value.trim()) $('et-voice-status').textContent='Question transcrite. Vérifie le texte puis appuie sur « Demander à EduTrack ».';
+        if($('et-question').value.trim()){ $('et-voice-status').textContent='Question reçue. EduTrack prépare sa réponse audio…'; submitQuestion(true); }
       };
       rec.start();
     } catch(err) {
