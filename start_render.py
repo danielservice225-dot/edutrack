@@ -145,39 +145,45 @@ try:
             body = b"".join(chunks)
             responsive_css = """
             *,*::before,*::after{box-sizing:border-box}
-            html{width:100%;max-width:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth}
-            body{width:100%;max-width:100%;min-width:0;margin:0;overflow-x:hidden}
+            html{width:100%;max-width:100%;min-height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth;overflow-x:hidden;overflow-y:auto}
+            body{width:100%;max-width:100%;min-width:0;min-height:100vh;min-height:100dvh;height:auto!important;margin:0;overflow-x:hidden;overflow-y:auto!important}
             img,video,canvas,iframe,svg{max-width:100%}
             input,textarea,select,button{font:inherit;max-width:100%}
             textarea{resize:vertical}
             pre,code{max-width:100%;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere}
             main,section,article,.container,.wrapper,.app,.app-container,.main-content,.chat-container,.chat-wrapper,.messages,.chat-messages{min-width:0;max-width:100%}
             @media(max-width:768px){
+              html,body{height:auto!important;min-height:100%;overflow-y:auto!important;overscroll-behavior-y:auto}
               body{font-size:16px}
-              /* Sur téléphone, le menu ne doit plus flotter au-dessus de l'accueil. */
+              /* La page entière défile : aucun menu ou conteneur ne doit enfermer le contenu. */
               aside,.sidebar,#sidebar,.side-menu,.sidebar-menu,.navigation-drawer,.nav-drawer,.menu-drawer{
                 position:relative!important;inset:auto!important;float:none!important;
                 width:100%!important;max-width:100%!important;height:auto!important;
-                max-height:32dvh!important;overflow-y:auto!important;transform:none!important;
-                z-index:2!important;box-shadow:none!important
+                min-height:0!important;max-height:none!important;overflow:visible!important;
+                transform:none!important;z-index:2!important;box-shadow:none!important
               }
-              /* Le contenu d'accueil reste visible sous le menu et prend toute la largeur. */
-              main,#main, .home, #home, .homepage, .home-page, .main-content, .content, .page-content,
+              main,#main,.home,#home,.homepage,.home-page,.main-content,.content,.page-content,
               [class*="dashboard"],[class*="home-content"]{
                 position:relative!important;inset:auto!important;float:none!important;
                 width:100%!important;max-width:100%!important;min-width:0!important;
-                margin-left:0!important;margin-right:0!important;transform:none!important
+                height:auto!important;min-height:0!important;max-height:none!important;
+                overflow:visible!important;margin-left:0!important;margin-right:0!important;transform:none!important
+              }
+              /* Neutralise les hauteurs fixes et les zones qui bloquent le scroll mobile. */
+              body>*,#app,#root,.app,.app-container,.layout,.page,.main-layout,.content-wrapper,
+              .dashboard-layout,.dashboard-content,.main-panel,.content-area{
+                max-width:100%!important;min-width:0!important;max-height:none!important
               }
               header,nav{max-width:100%}
               main,.container,.wrapper,.app-container,.main-content{width:100%!important;max-width:100%!important}
               input,textarea,select{font-size:16px!important}
               button{min-height:42px;touch-action:manipulation}
-              .messages,.chat-messages{overflow-y:auto;overscroll-behavior:contain}
-              #et-study-launch{right:12px;bottom:12px;max-width:calc(100vw - 24px);padding:12px 15px}
-              #et-study-panel{left:8px;right:8px;bottom:66px;width:auto;max-width:none;max-height:calc(100dvh - 82px);border-radius:16px}
-              #et-study-panel .et-body{padding:12px;overflow-y:auto}
+              .messages,.chat-messages{min-height:120px;overflow-y:auto;overscroll-behavior:contain}
+              #et-study-launch{position:fixed;right:12px;bottom:12px;max-width:calc(100vw - 24px);padding:12px 15px}
+              #et-study-panel{position:fixed;left:8px;right:8px;bottom:66px;width:auto;max-width:none;max-height:calc(100dvh - 82px);overflow:hidden;border-radius:16px}
+              #et-study-panel .et-body{padding:12px;overflow-y:auto;max-height:calc(100dvh - 160px);overscroll-behavior:contain}
               #et-study-panel .et-row{flex-wrap:wrap}
-              #et-study-panel .et-row>*{flex:1 1 135px}
+              #et-study-panel .et-row>*{flex:1 1 135px;min-width:0}
               #edutrack-brand-logo{top:6px!important;left:6px!important;padding:3px 7px!important}
               #edutrack-brand-logo img{width:118px!important}
             }
@@ -190,7 +196,7 @@ try:
             @media(min-width:769px) and (max-width:1100px){
               #et-study-panel{max-height:82dvh}
             }
-            """.encode("utf-8")
+            """
             style_tag = b"<style id='edutrack-responsive-layout'>" + responsive_css + b"</style>"
             script_tag = ("<script>" + study_script + "</script>").encode("utf-8")
             logo_path = ROOT / "static" / "edutrack-logo.svg"
